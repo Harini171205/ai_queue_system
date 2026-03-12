@@ -6,6 +6,18 @@
 /** Service categories available for token generation */
 export const SERVICE_TYPES = ['Hospital', 'Bank', 'Govt Office'];
 
+/**
+ * Sector-specific configuration that drives wait-time calculations.
+ *  avgMinPerToken – average minutes a single token takes to serve
+ *  counters       – number of parallel counters open in that sector
+ *  icon / color   – UI decoration
+ */
+export const SECTOR_CONFIG = {
+  Hospital:      { avgMinPerToken: 8,  counters: 3, icon: '🏥', color: 'rose'  },
+  Bank:          { avgMinPerToken: 5,  counters: 4, icon: '🏦', color: 'blue'  },
+  'Govt Office': { avgMinPerToken: 12, counters: 2, icon: '🏛️', color: 'amber' },
+};
+
 /** Possible statuses a token can have */
 export const TOKEN_STATUS = {
   WAITING: 'Waiting',
@@ -47,12 +59,11 @@ export const PEAK_HOURS_DATA = [
   { hour: '5PM',  tokens: 18 },
 ];
 
-/** Average wait time per service type */
-export const AVG_WAIT_DATA = [
-  { service: 'Hospital',    avgWait: 22 },
-  { service: 'Bank',        avgWait: 15 },
-  { service: 'Govt Office', avgWait: 28 },
-];
+/** Average wait time per service type (derived from SECTOR_CONFIG for consistency) */
+export const AVG_WAIT_DATA = Object.entries(SECTOR_CONFIG).map(([service, cfg]) => ({
+  service,
+  avgWait: cfg.avgMinPerToken,
+}));
 
 /** Tokens served per counter */
 export const COUNTER_DATA = [
@@ -68,5 +79,13 @@ export const generateTokenNumber = (existing) => {
   return `A${String(next).padStart(3, '0')}`;
 };
 
-/** Helper – estimate wait time in minutes based on queue position */
-export const estimateWait = (position) => position * 5;
+/**
+ * Helper – estimate wait time in minutes based on queue position and sector.
+ * Formula: ceil(position * avgMinPerToken / counters)
+ * Each sector has its own service rate and parallel counters, so wait times
+ * differ meaningfully across Hospital, Bank, and Govt Office.
+ */
+export const estimateWait = (position, serviceType = 'Bank') => {
+  const cfg = SECTOR_CONFIG[serviceType] ?? { avgMinPerToken: 5, counters: 1 };
+  return Math.ceil((position * cfg.avgMinPerToken) / cfg.counters);
+};

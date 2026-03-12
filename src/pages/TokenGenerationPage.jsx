@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useQueue } from '../context/QueueContext';
-import { SERVICE_TYPES } from '../services/mockData';
+import { SERVICE_TYPES, SECTOR_CONFIG } from '../services/mockData';
 import Loader from '../components/Loader';
 
 const INITIAL_FORM = { name: '', phone: '', serviceType: SERVICE_TYPES[0] };
@@ -190,6 +190,21 @@ const TokenGenerationPage = () => {
               ))}
             </select>
             {errors.serviceType && <p className="text-red-500 text-xs mt-1">{errors.serviceType}</p>}
+            {/* Sector-specific wait time hint */}
+            {form.serviceType && SECTOR_CONFIG[form.serviceType] && (() => {
+              const cfg = SECTOR_CONFIG[form.serviceType];
+              const colorMap = { rose: 'bg-rose-50 border-rose-200 text-rose-700', blue: 'bg-blue-50 border-blue-200 text-blue-700', amber: 'bg-amber-50 border-amber-200 text-amber-700' };
+              const cls = colorMap[cfg.color] ?? colorMap.blue;
+              return (
+                <div className={`mt-2 flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${cls}`}>
+                  <span>{cfg.icon}</span>
+                  <span>
+                    <span className="font-semibold">{form.serviceType}</span>{' '}
+                    — avg {cfg.avgMinPerToken} min/token · {cfg.counters} counters open
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Submit */}

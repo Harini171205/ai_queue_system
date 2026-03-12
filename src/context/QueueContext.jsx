@@ -9,6 +9,7 @@ import {
   MOCK_TOKENS,
   ADMIN_STATS,
   TOKEN_STATUS,
+  SECTOR_CONFIG,
   generateTokenNumber,
   estimateWait,
 } from '../services/mockData';
@@ -31,14 +32,36 @@ export const QueueProvider = ({ children }) => {
     }, 4000);
   }, []);
 
+  // ── Per-sector stats (computed from current token list) ─────
+  const getSectorStats = useCallback(() => {
+    return Object.entries(SECTOR_CONFIG).map(([sector, cfg]) => {
+      const sectorTokens = tokens.filter((t) => t.serviceType === sector);
+      const waitingInSector = sectorTokens.filter((t) => t.status === TOKEN_STATUS.WAITING);
+      const avgWait = waitingInSector.length > 0
+        ? Math.ceil((waitingInSector.length * cfg.avgMinPerToken) / cfg.counters)
+        : 0;
+      return {
+        sector,
+        icon: cfg.icon,
+        color: cfg.color,
+        counters: cfg.counters,
+        avgMinPerToken: cfg.avgMinPerToken,
+        waiting: waitingInSector.length,
+        total: sectorTokens.length,
+        avgWait,
+      };
+    });
+  }, [tokens]);
+
   // ── Generate a new token and add it to the queue ───────────
   const generateToken = useCallback(
     ({ name, phone, serviceType }) => {
       const tokenNumber = generateTokenNumber(tokens);
+      // Position is counted only within the same sector's waiting queue
       const position = tokens.filter(
-        (t) => t.status === TOKEN_STATUS.WAITING
+        (t) => t.status === TOKEN_STATUS.WAITING && t.serviceType === serviceType
       ).length + 1;
-      const waitMin = estimateWait(position);
+      const waitMin = estimateWait(position, serviceType);
 
       const newToken = {
         id: tokens.length + 1,
@@ -114,6 +137,7 @@ export const QueueProvider = ({ children }) => {
         generateToken,
         callNextToken,
         markCompleted,
+        getSectorStats,
       }}
     >
       {children}
